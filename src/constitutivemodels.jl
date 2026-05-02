@@ -234,15 +234,3 @@ function Material(filepath::AbstractString)
     isfile(filepath) || error("Material file not found: $filepath")
     return Material(TOML.parsefile(filepath))
 end
-
-
-# Local Variables:
-# outline-regexp: "# \\([=-]+\\)"
-# outline-level: (lambda ()
-#                  (let ((s (match-string 1)))
-#                    (cond
-#                     ((string-match-p "=" s) 1)
-#                     ((string-match-p "-" s) 2)
-#                     (t 3))))
-# eval: (outline-minor-mode 1)
-# End:
