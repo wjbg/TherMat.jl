@@ -1,4 +1,6 @@
+using Interpolations
 using LinearAlgebra: Diagonal
+
 
 # ================================================================
 # Definitions and interface
@@ -53,8 +55,9 @@ Material(k::Real, ρ::Real, cₚ::Real) =
     Material(ConstantModel(k), ConstantModel(ρ), ConstantModel(cₚ))
 
 # Accessor
-(m::Material)(T) = (k=k(m, T), ρ=ρ(m, T), cₚ=cₚ(m, T))
-
+(m::Material)(T) = (k=Diagonal((m.k[1](T), m.k[2](T), m.k[3](T))),
+                    ρ=m.ρ(T),
+                    cₚ=m.cₚ(T))
 
 # ================================================================
 # Print functions
@@ -63,7 +66,6 @@ Material(k::Real, ρ::Real, cₚ::Real) =
 function Base.show(io::IO, m::Material)
     is_iso = (m.k[1] === m.k[2] === m.k[3])
     type_str = is_iso ? "Isotropic" : "Orthotropic"
-
     print(io, "Material(\"", m.name, "\", ", type_str, ")")
 end
 
@@ -141,6 +143,24 @@ PolynomialModel(coefs::AbstractVector{S}) where {S} =
     PolynomialModel(Tuple(coefs))
 
 """
+    PiecewiseLinearModel(x, y)
+
+Linear interpolation between data points with flat extrapolation (clamping).
+"""
+struct PiecewiseLinearModel{T} <: MaterialModel
+    itp::T
+end
+
+function PiecewiseLinearModel(x::AbstractVector, y::AbstractVector)
+    issorted(x) || error("x-coordinates must be strictly increasing.")
+    length(x) == length(y) || error("x and y vectors must be the same length.")
+    itp = linear_interpolation(x, y, extrapolation_bc=Flat())
+    return PiecewiseLinearModel(itp)
+end
+
+(m::PiecewiseLinearModel)(T) = m.itp(T)
+
+"""
     SemiCrystallineCp <: MaterialModel
 
 Specific heat model for semi-crystalline polymers, capturing the glass transition
@@ -182,6 +202,12 @@ function MaterialModel(d::AbstractDict)
     elseif m_type == "Polynomial"
         return PolynomialModel(Float64.(d["coefs"]))
 
+    elseif m_type == "PiecewiseLinear"
+        return PiecewiseLinearModel(
+            Float64.(d["x"]),
+            Float64.(d["y"])
+        )
+
     elseif m_type == "SemiCrystalline"
         return SemiCrystallineCp(
             Tg  = Float64(d["Tg"]),
@@ -193,7 +219,7 @@ function MaterialModel(d::AbstractDict)
             ΔT  = Float64(d["dT"])
         )
     else
-        valid_types = ["Constant", "Polynomial", "SemiCrystalline"]
+        valid_types = ["Constant", "Polynomial", "PiecewiseLinear","SemiCrystalline"]
         error("Unknown model type: '$m_type'. Expected one of: $(join(valid_types, ", ")).")
     end
 end
