@@ -1,9 +1,26 @@
-using Interpolations
-using LinearAlgebra: Diagonal
+# ================================================================
+# Constitutive material models
+# ================================================================
+#
+# This module defines temperature-dependent constitutive models
+# used in thermal finite element simulations.
+#
+# It provides:
+# - A generic Material type combining anisotropic conductivity,
+#   density, and heat capacity models
+# - A hierarchy of scalar constitutive models (constant, polynomial,
+#   interpolated, semi-crystalline, etc.)
+# - A functional interface: all models are callable as f(T)
+# - Factory methods for constructing models from TOML input
+#
+# The design is based on composition of small callable models,
+# enabling flexible temperature-dependent material behavior without
+# introducing additional material subtypes.
+# ================================================================
 
 
 # ================================================================
-# Definitions and interface
+# Material type definitions
 # ================================================================
 
 abstract type MaterialModel end
@@ -96,7 +113,11 @@ end
 
 
 # ================================================================
-# Constitutive models
+# Scalar constitutive models
+# ================================================================
+#
+# Models implementing f(T) behavior for material properties such as:
+# conductivity, density, and heat capacity.
 # ================================================================
 
 """
@@ -245,7 +266,9 @@ function Material(d::AbstractDict)
         k_iso = MaterialModel(d["k"])
         k = (k_iso, k_iso, k_iso)
     else
-        error("Material must define either 'k' (isotropic) or 'k1', 'k2', 'k3' (orthotropic) in TOML.")
+        msg = "Material must define either 'k' (isotropic)" *
+              "or 'k1', 'k2', 'k3' (orthotropic) in TOML."
+        error(msg)
     end
 
     return Material(k=k, ρ=ρ, cₚ=cₚ, name=name, note=note)
