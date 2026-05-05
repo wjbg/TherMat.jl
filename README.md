@@ -48,4 +48,4 @@ save_material("updated_material.toml", m)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details (or choice of license).
+This project is licensed under the MIT License - see the [MIT.txt](MIT.txt) file for details.
